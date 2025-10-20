@@ -17,14 +17,20 @@ from training import train_model
 load_dotenv()
 app = FastAPI(title="Backend ML/DL - Análisis de Datos")
 
+# --- CONFIGURACIÓN CORS SEGURA Y DINÁMICA ---
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")  # usa tu variable .env o localhost por defecto
+print(f"🟢 FRONTEND_URL permitido: {frontend_url}")
+
 # Permitir conexión desde el frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080", "http://localhost:8081", "https://trabajo-ml.vercel.app"],  # Origen del frontend de desarrollo
+    allow_origins=[frontend_url],  # Render leerá tu FRONTEND_URL del entorno
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# --- FIN CORS ---
+
 
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
 MODEL_DIR = os.getenv("MODEL_DIR", "./models")
