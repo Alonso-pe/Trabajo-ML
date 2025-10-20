@@ -20,7 +20,7 @@ app = FastAPI(title="Backend ML/DL - Análisis de Datos")
 # Permitir conexión desde el frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080", "http://localhost:8081", "https://trabajo-ml.vercel.app/"],  # Origen del frontend de desarrollo
+    allow_origins=["http://localhost:8080", "http://localhost:8081", "https://trabajo-ml.vercel.app"],  # Origen del frontend de desarrollo
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
