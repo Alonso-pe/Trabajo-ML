@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api"; 
 
 const LoadData = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -78,36 +79,31 @@ const LoadData = () => {
     formData.append("file", uploadedFile);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/upload-csv", {
-        method: "POST",
-        body: formData,
-      });
+  // Usa api.post, pasa la ruta relativa y los datos (FormData)
+  const response = await api.post("/upload-csv", formData);
 
-      const result = await response.json();
+  // Con Axios, los datos ya vienen parseados en response.data
+  const result = response.data; 
 
-      if (!response.ok) {
-        throw new Error(result.error || "Error al subir el archivo");
-      }
+  toast({
+    title: "Archivo subido exitosamente",
+    description: `${result.filename} ha sido subido y está listo para el entrenamiento.`,
+  });
 
-      toast({
-        title: "Archivo subido exitosamente",
-        description: `${result.filename} ha sido subido y está listo para el entrenamiento.`,
-      });
+  localStorage.setItem('uploadedFileName', result.filename);
+  setTimeout(() => navigate('/clean-data'), 1000);
 
-      // Guardar información relevante para el siguiente paso si es necesario
-      localStorage.setItem('uploadedFileName', result.filename);
-
-      setTimeout(() => navigate('/clean-data'), 1000);
-
-    } catch (error: any) {
-      toast({
-        title: "Error al procesar el archivo",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
+} catch (error: any) {
+  // Axios pone los detalles del error en error.response.data si el servidor respondió con error
+  const errorMessage = error.response?.data?.detail || error.response?.data?.error || error.message || "Error desconocido al procesar el archivo";
+  toast({
+    title: "Error al procesar el archivo",
+    description: errorMessage,
+    variant: "destructive",
+  });
+} finally {
+  setIsProcessing(false);
+}
   };
 
   return (

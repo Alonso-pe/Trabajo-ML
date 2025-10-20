@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 const TrainModels = () => {
   const [isTraining, setIsTraining] = useState(false);
@@ -29,19 +30,20 @@ const TrainModels = () => {
     if (fileName) {
       const fetchCsvInfo = async () => {
         try {
-          const response = await fetch(`http://127.0.0.1:8000/get-csv-info/${fileName}`);
-          const result = await response.json();
-          if (!response.ok) {
-            throw new Error(result.detail || 'Failed to fetch CSV info');
-          }
-          setAvailableRows(result.stats.rows);
-        } catch (error: any) {
-          toast({
-            title: "Error al cargar datos del CSV",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+  const response = await api.get(`/get-csv-info/${fileName}`);
+  const result = response.data; // Usa response.data
+  if (!response.status.toString().startsWith('2')) { // O puedes confiar en el catch de Axios
+     throw new Error(result.detail || 'Failed to fetch CSV info');
+  }
+  setAvailableRows(result.stats.rows);
+} catch (error: any) {
+   const errorMessage = error.response?.data?.detail || error.message || "Error desconocido al cargar datos del CSV";
+  toast({
+    title: "Error al cargar datos del CSV",
+    description: errorMessage,
+    variant: "destructive",
+  });
+}
       };
       fetchCsvInfo();
     }
@@ -78,20 +80,16 @@ const TrainModels = () => {
     }, 500);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/train-model", {
-        method: "POST",
-        body: formData,
-      });
+  // Usa api.post con FormData
+  const response = await api.post("/train-model", formData);
 
-      clearInterval(progressInterval);
-      const backendResult = await response.json();
+  clearInterval(progressInterval);
+  const backendResult = response.data; // Usa response.data
 
-      if (!response.ok) {
-        throw new Error(backendResult.detail || "Error en el entrenamiento del modelo");
-      }
+  // Axios ya maneja el error si no es 2xx
 
-      setTrainingStatus("Procesando resultados...");
-      setProgress(100);
+  setTrainingStatus("Procesando resultados...");
+  setProgress(100);
 
       const finalResults = {
         ...backendResult.result.metrics,
@@ -115,15 +113,16 @@ const TrainModels = () => {
       setTimeout(() => navigate('/results'), 1000);
 
     } catch (error: any) {
-      clearInterval(progressInterval);
-      toast({
-        title: "Error en el entrenamiento",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsTraining(false);
-    }
+  clearInterval(progressInterval);
+  const errorMessage = error.response?.data?.detail || error.message || "Error desconocido en el entrenamiento";
+  toast({
+    title: "Error en el entrenamiento",
+    description: errorMessage,
+    variant: "destructive",
+  });
+} finally {
+  setIsTraining(false);
+}
   };
 
   return (

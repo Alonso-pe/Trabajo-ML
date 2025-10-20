@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api"; 
 
 const CleanData = () => {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
@@ -37,13 +38,11 @@ const CleanData = () => {
 
       const fetchCsvInfo = async () => {
         try {
-          const response = await fetch(`http://127.0.0.1:8000/get-csv-info/${fileName}`);
-          const result = await response.json();
-          if (!response.ok) {
-            throw new Error(result.detail || 'Failed to fetch CSV info');
-          }
-          setDataStats(result.stats);
-          setPreviewData(result.preview_data);
+          const response = await api.get(`/get-csv-info/${fileName}`);
+          // axios ya parsea el JSON, así que accedes a los datos directamente
+          setDataStats(response.data.stats); 
+          setPreviewData(response.data.preview_data); 
+          // Nota: axios lanza un error automáticamente si response.ok no es true
         } catch (error: any) {
           toast({
             title: "Error al cargar datos",
@@ -87,43 +86,35 @@ const CleanData = () => {
     setIsCleaning(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/clean-data", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          filename: originalFileName,
-          operations: selectedOptions,
-        }),
-      });
+  // Usa api.post, pasa la ruta relativa y el objeto de datos
+  // Axios automáticamente pone Content-Type: application/json y serializa el objeto
+  const response = await api.post("/clean-data", {
+    filename: originalFileName,
+    operations: selectedOptions,
+  });
 
-      const result = await response.json();
+  const result = response.data; // Accede a los datos directamente
 
-      if (!response.ok) {
-        throw new Error(result.detail || "Error al limpiar los datos");
-      }
+  setDataStats(result.cleaned_stats);
+  setPreviewData(result.preview_data);
+  setCleanedFileName(result.cleaned_filename);
+  localStorage.setItem('cleanedFileName', result.cleaned_filename);
 
-      setDataStats(result.cleaned_stats);
-      setPreviewData(result.preview_data);
-      setCleanedFileName(result.cleaned_filename);
+  toast({
+    title: "Limpieza completada",
+    description: `Dataset limpio: ${result.cleaned_stats.rows} filas procesadas correctamente`,
+  });
 
-      localStorage.setItem('cleanedFileName', result.cleaned_filename);
-
-      toast({
-        title: "Limpieza completada",
-        description: `Dataset limpio: ${result.cleaned_stats.rows} filas procesadas correctamente`,
-      });
-
-    } catch (error: any) {
-      toast({
-        title: "Error en la limpieza",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsCleaning(false);
-    }
+} catch (error: any) {
+  const errorMessage = error.response?.data?.detail || error.message || "Error desconocido en la limpieza";
+  toast({
+    title: "Error en la limpieza",
+    description: errorMessage,
+    variant: "destructive",
+  });
+} finally {
+  setIsCleaning(false);
+}
   };
 
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {

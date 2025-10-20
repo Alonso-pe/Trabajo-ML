@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api";
 import {
   Table,
   TableBody,
@@ -36,22 +37,27 @@ const ViewData = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/view-data/${filename}?page=${page}&page_size=50`
-      );
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.detail || "Failed to fetch data");
-      }
-      const result = await response.json();
-      setData(result.data);
-      setHeaders(result.headers);
-      setPagination(result.pagination);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+  // Usa api.get con la ruta relativa y los parámetros
+  const response = await api.get(`/view-data/${filename}`, {
+     params: { 
+       page: page, 
+       page_size: 50 
+     }
+  });
+
+  const result = response.data; // Usa response.data
+
+  // Axios ya maneja el error si no es 2xx
+
+  setData(result.data);
+  setHeaders(result.headers);
+  setPagination(result.pagination);
+} catch (e: any) {
+   const errorMessage = e.response?.data?.detail || e.message || "Error desconocido al cargar datos";
+  setError(errorMessage);
+} finally {
+  setLoading(false);
+}
   };
 
   useEffect(() => {

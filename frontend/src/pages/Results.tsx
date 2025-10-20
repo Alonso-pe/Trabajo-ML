@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ResponsiveContainer, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart as RechartsBarChart } from 'recharts';
+import { api } from "@/lib/api";
 
 const Results = () => {
   const [results, setResults] = useState<any>(null);
@@ -19,34 +20,48 @@ const Results = () => {
   }, []);
 
   const handleExportToDb = async () => {
-    if (!results) return;
+  if (!results) {
+    // Si no hay resultados cargados (desde localStorage), no hagas nada o muestra un error.
+    toast({
+      title: "No hay resultados",
+      description: "No se encontraron resultados para exportar.",
+      variant: "destructive",
+    });
+    return; 
+  }
 
-    try {
-      const response = await fetch("http://127.0.0.1:8000/export-to-db", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(results),
-      });
+  try {
+    // Llama al método post de la instancia 'api' (Axios)
+    // El primer argumento es la ruta relativa del endpoint: "/export-to-db"
+    // El segundo argumento es el objeto 'results' que contiene los datos a enviar
+    // Axios maneja automáticamente la cabecera Content-Type: application/json
+    // y convierte el objeto 'results' a JSON.
+    const response = await api.post("/export-to-db", results); 
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Error al exportar los resultados");
-      }
+    // Axios lanza un error automáticamente si la respuesta del backend no es exitosa (código 2xx).
+    // Por lo tanto, no necesitamos verificar 'response.ok' explícitamente.
+    // Si la llamada llega a este punto, fue exitosa.
 
-      toast({
-        title: "Exportación exitosa",
-        description: "Los resultados del modelo se han guardado en la base de datos.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error en la exportación",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
+    // Muestra un mensaje de éxito usando el toast
+    toast({
+      title: "Exportación exitosa",
+      description: "Los resultados del modelo se han guardado en la base de datos.",
+    });
+
+  } catch (error: any) {
+    // Si Axios lanzó un error (por problema de red o respuesta no exitosa del backend):
+    // Intenta obtener el mensaje de error detallado desde la respuesta del backend,
+    // si no, usa el mensaje de error general.
+    const errorMessage = error.response?.data?.detail || error.message || "Error desconocido en la exportación";
+    
+    // Muestra un mensaje de error usando el toast
+    toast({
+      title: "Error en la exportación",
+      description: errorMessage,
+      variant: "destructive",
+    });
+  }
+};
 
   if (!results) {
     return (
